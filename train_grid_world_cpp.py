@@ -2,13 +2,36 @@
 # python train_grid_world_cpp.py <train|test|run|curriculum> dim obstacles max_steps total_timesteps
 #
 
+# Uso:
+#
+# Treinar:
+#   python train_grid_world_cpp.py train 5 3 200 500000
+#
+# Testar modelo treinado:
+#   python train_grid_world_cpp.py test 5 3 200
+#
+# Visualizar modelo treinado:
+#   python train_grid_world_cpp.py run 5 3 200
+#
+# Continuar treinamento a partir de um modelo pré-treinado:
+#   python train_grid_world_cpp.py curriculum 10 12 400 500000
+#
+# Argumentos:
+#   mode             = train, test, run ou curriculum
+#   dim              = tamanho do grid. Ex: 5, 10, 20
+#   obstacles        = quantidade de obstáculos. Ex: 3, 12, 48
+#   max_steps        = máximo de passos por episódio. Ex: 200, 500, 1000
+#   total_timesteps  = quantidade de passos de treino. Usado só em train/curriculum, 500_000
+#   curriculum: python train_grid_world_cpp.py curriculum 10 12 400 500000
+
 import gymnasium as gym
 from gymnasium_env.grid_world_cpp import GridWorldCPPEnv
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.logger import configure
 from datetime import datetime
-import sys
+import sys  
+import os
 
 def print_action(action: int) -> str:
     return {
@@ -18,25 +41,39 @@ def print_action(action: int) -> str:
         3: "down",
     }.get(action, "unknown")
 
-if sys.argv[1] not in ['train', 'test', 'run', 'curriculum']:
-    print("Usage: python train_grid_world_cpp.py <train|test|run|curriculum> dim obstacles max_steps total_timesteps")
+# --- Argument validation ---
+if len(sys.argv) < 2 or sys.argv[1] not in ['train', 'test', 'run', 'curriculum']:
+    print("Usage: python train_grid_world_cpp.py <train|test|run|curriculum> dim obstacles max_steps [total_timesteps]")
     sys.exit(1)
-elif sys.argv[1] in ['train','curriculum']:
+
+mode = sys.argv[1]
+
+if mode in ['train', 'curriculum']:
     if len(sys.argv) != 6:
         print("Usage for training: python train_grid_world_cpp.py train|curriculum dim obstacles max_steps total_timesteps")
         sys.exit(1)
-elif sys.argv[1] in ['test', 'run']:
-    if len(sys.argv) != 4:
-        print("Usage for testing/running: python train_grid_world_cpp.py test|run dim obstacles")
+
+elif mode in ['test', 'run']:
+    if len(sys.argv) != 5:
+        print("Usage for testing/running: python train_grid_world_cpp.py test|run dim obstacles max_steps")
         sys.exit(1)
 
 # --- Hyperparameters ---
-mode = sys.argv[1]
-DIM = int(sys.argv[2]) # 5, 10, 20
-OBSTACLES = int(sys.argv[3]) # 3, 12, 48
-MAX_STEPS = int(sys.argv[4]) # 200, 500, 1000
-TOTAL_TIMESTEPS = int(sys.argv[5]) # 500_000
+DIM = int(sys.argv[2])            # 5, 10, 20
+OBSTACLES = int(sys.argv[3])      # 3, 12, 48
+MAX_STEPS = int(sys.argv[4])      # 200, 400, 800
+
+if mode in ['train', 'curriculum']:
+    TOTAL_TIMESTEPS = int(sys.argv[5])  # 500_000, 1_000_000
+else:
+    TOTAL_TIMESTEPS = None              # Not used in test/run
+
 ENTROPY_COEF = 0.05
+# -----------------------
+
+os.makedirs("data", exist_ok=True)
+os.makedirs("log", exist_ok=True)
+
 # -----------------------
 
 try:
@@ -98,7 +135,6 @@ elif mode == 'curriculum':
     )
 
     # Continua o treinamento com os pesos já inicializados
-    model.learn(total_timesteps=MAX_STEPS, reset_num_timesteps=False)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_dir = f'log/ppo_cpp_{DIM}_{OBSTACLES}_{MAX_STEPS}_{ENTROPY_COEF}_{timestamp}_curriculum'
@@ -133,7 +169,7 @@ elif mode == 'run':
     steps = 0
     total_reward = 0
     while not done and not truncated:
-        action, _ = model.predict(obs, deterministic=False)
+        action, _ = model.predict(obs, deterministic=True)
         obs, reward, done, truncated, info = env.step(action.item())
         total_reward += reward
         steps += 1
@@ -167,7 +203,7 @@ elif mode == 'test':
         truncated = False
         steps = 0
         while not done and not truncated:
-            action, _ = model.predict(obs, deterministic=False)
+            action, _ = model.predict(obs, deterministic=True)
             obs, reward, done, truncated, info = env.step(action.item())
             steps += 1
 
