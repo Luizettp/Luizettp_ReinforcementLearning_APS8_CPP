@@ -68,7 +68,7 @@ if mode in ['train', 'curriculum']:
 else:
     TOTAL_TIMESTEPS = None              # Not used in test/run
 
-ENTROPY_COEF = 0.05
+ENTROPY_COEF = 0.007
 # -----------------------
 
 os.makedirs("data", exist_ok=True)
@@ -203,7 +203,7 @@ elif mode == 'test':
         truncated = False
         steps = 0
         while not done and not truncated:
-            action, _ = model.predict(obs, deterministic=True)
+            action, _ = model.predict(obs, deterministic=False)
             obs, reward, done, truncated, info = env.step(action.item())
             steps += 1
 

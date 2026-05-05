@@ -51,8 +51,8 @@ class GridWorldCPPEnv(gym.Env):
         # Observation: Dict with agent info (x, y, coverage) and 3x3 neighbor matrix
         self.observation_space = gym.spaces.Dict({
             "agent": gym.spaces.Box(
-                low=np.array([0.0, 0.0, 0.0], dtype=np.float32),
-                high=np.array([1.0, 1.0, 1.0], dtype=np.float32),
+                low=np.zeros(3, dtype=np.float32),
+                high=np.ones(3, dtype=np.float32),
                 dtype=np.float32
             ),
             "neighbors": gym.spaces.Box(
@@ -153,6 +153,7 @@ class GridWorldCPPEnv(gym.Env):
         return observation, info
 
     def step(self, action):
+
         direction = self._action_to_direction[action]
         old_location = self._agent_location.copy()
 
@@ -177,14 +178,14 @@ class GridWorldCPPEnv(gym.Env):
         reward = -0.1
 
         if stayed_in_place:
-            # Hitting wall or obstacle
+    # Hitting wall or obstacle.
             reward -= 0.5
         elif is_new_cell:
-            # Reward for exploring new cell
+            # Reward for exploring new cell.
             reward += 1.0
             self.visited.add(current_pos)
         else:
-            # Penalty for revisiting
+            # Penalty for revisiting an already visited cell.
             reward -= 0.3
 
         # Check if full coverage achieved
