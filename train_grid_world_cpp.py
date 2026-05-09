@@ -74,7 +74,7 @@ ENTROPY_COEF = 0.007
 os.makedirs("data", exist_ok=True)
 os.makedirs("log", exist_ok=True)
 
-# -----------------------
+# -----------------------   ' 
 
 try:
     gym.register(
@@ -192,7 +192,7 @@ elif mode == 'test':
         render_mode="rgb_array"
     )
 
-    num_episodes = 100
+    num_episodes = 1000
     full_coverage_count = 0
     total_coverages = []
     total_steps_list = []

@@ -1,0 +1,7 @@
+Estratégia,Full Coverage,Average Coverage,Average Steps
+Baseline professor,81.0,,
+Entropia 0.007,54.0,97.7,287.3
+Estado local,68.0,99.24,243.2
+Estado local + 8x8,96.0,99.96,161.8
+PPO6 final 10x10,94.3,99.86,182.8
+Treino extra 10x10,88.0,99.49,208.0

@@ -1,0 +1,11 @@
+Estratégia,Full Coverage,Average Coverage,Average Steps
+"Estado original
+5x5",54.0,97.7,287.3
+"Estado local
+5x5",68.0,99.24,243.2
+"Curriculum
+5x5 -> 8x8",96.0,99.96,161.8
+"Final 1000 ep.
+5x5 -> 8x8",94.3,99.86,182.8
+"Treino extra
+10x10 + 1M",88.0,99.49,208.0

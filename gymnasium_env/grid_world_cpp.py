@@ -51,8 +51,8 @@ class GridWorldCPPEnv(gym.Env):
         # Observation: Dict with agent info (x, y, coverage) and 3x3 neighbor matrix
         self.observation_space = gym.spaces.Dict({
             "agent": gym.spaces.Box(
-                low=np.zeros(3, dtype=np.float32),
-                high=np.ones(3, dtype=np.float32),
+                low=np.zeros(6, dtype=np.float32),
+                high=np.ones(6, dtype=np.float32),
                 dtype=np.float32
             ),
             "neighbors": gym.spaces.Box(
@@ -85,12 +85,60 @@ class GridWorldCPPEnv(gym.Env):
     def coverage_ratio(self):
         return len(self.visited) / self.total_free_cells if self.total_free_cells > 0 else 1.0
 
+    def _all_free_cells_reachable(self):
+        """
+        Checks whether all non-obstacle cells are reachable from the agent's
+        initial position. This is used only by the environment during reset,
+        and is not exposed to the agent.
+        """
+        obstacles = {tuple(loc) for loc in self.obstacles_locations}
+        start = tuple(self._agent_location)
+
+        visited = set()
+        stack = [start]
+
+        while stack:
+            cell = stack.pop()
+
+            if cell in visited:
+                continue
+
+            visited.add(cell)
+            x, y = cell
+
+            for direction in self._action_to_direction.values():
+                nx = x + int(direction[0])
+                ny = y + int(direction[1])
+                neighbor = (nx, ny)
+
+                if not (0 <= nx < self.size and 0 <= ny < self.size):
+                    continue
+
+                if neighbor in obstacles:
+                    continue
+
+                if neighbor not in visited:
+                    stack.append(neighbor)
+
+        total_free_cells = self.size * self.size - len(obstacles)
+
+        return len(visited) == total_free_cells
+
     def _get_obs(self):
+        # Local statistics computed only from the 3x3 partial observation.
+        # These values do not reveal the full map.
+        local_unvisited_ratio = np.sum(self._neighbors == 0) / 9.0
+        local_blocked_ratio = np.sum(self._neighbors == 1) / 9.0
+        local_visited_ratio = np.sum(self._neighbors == 2) / 9.0
+
         return {
             "agent": np.array([
                 self._agent_location[0] / self.size,
                 self._agent_location[1] / self.size,
                 self.coverage_ratio,
+                local_unvisited_ratio,
+                local_blocked_ratio,
+                local_visited_ratio,
             ], dtype=np.float32),
             "neighbors": self._neighbors.astype(np.float32),
         }
@@ -131,13 +179,26 @@ class GridWorldCPPEnv(gym.Env):
         # Place agent randomly
         self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int)
 
-        # Place obstacles
-        for _ in range(self.obs_quantity):
-            obstacle_location = self._agent_location.copy()
-            while (np.array_equal(obstacle_location, self._agent_location) or
-                   any(np.array_equal(obstacle_location, loc) for loc in self.obstacles_locations)):
-                obstacle_location = self.np_random.integers(0, self.size, size=2, dtype=int)
-            self.obstacles_locations.append(obstacle_location)
+        # Place obstacles.
+        # We resample obstacles until all free cells are reachable from the
+        # agent's initial position. This avoids impossible CPP episodes.
+        valid_map = False
+
+        while not valid_map:
+            self.obstacles_locations = []
+
+            for _ in range(self.obs_quantity):
+                obstacle_location = self._agent_location.copy()
+
+                while (
+                    np.array_equal(obstacle_location, self._agent_location)
+                    or any(np.array_equal(obstacle_location, loc) for loc in self.obstacles_locations)
+                ):
+                    obstacle_location = self.np_random.integers(0, self.size, size=2, dtype=int)
+
+                self.obstacles_locations.append(obstacle_location)
+
+            valid_map = self._all_free_cells_reachable()
 
         # Mark starting position as visited
         self.visited.add(tuple(self._agent_location))
@@ -178,7 +239,7 @@ class GridWorldCPPEnv(gym.Env):
         reward = -0.1
 
         if stayed_in_place:
-    # Hitting wall or obstacle.
+            # Hitting wall or obstacle.
             reward -= 0.5
         elif is_new_cell:
             # Reward for exploring new cell.

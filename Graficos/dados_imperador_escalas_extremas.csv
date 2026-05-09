@@ -1,0 +1,4 @@
+Mapa,Obstaculos,Max steps,Episodios,Full Coverage,Average Coverage,Average Steps
+30x30,108,2250,100,92.0,99.96,1455.3
+40x40,192,6400,100,97.0,99.94,2994.9
+60x60,432,14400,100,90.0,99.98,9404.7

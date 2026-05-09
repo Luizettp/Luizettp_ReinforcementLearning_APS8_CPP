@@ -1,0 +1,5 @@
+Ambiente,Full Coverage,Average Coverage,Average Steps,Max Steps
+5x5,98.9,99.87,31.9,200
+8x8,95.9,99.86,101.7,320
+10x10,94.3,99.86,182.8,500
+20x20,36.7,98.76,911.2,1000
